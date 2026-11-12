@@ -29,16 +29,28 @@ def load_env_file():
 load_env_file()
 
 
+def get_env_value(*keys, default=""):
+    for key in keys:
+        value = os.environ.get(key)
+        if value is not None and str(value).strip() != "":
+            return str(value).strip()
+    return default
+
+
+def normalize_credential(value):
+    return "" if value is None else str(value).replace(" ", "").replace("\t", "").replace("\n", "").replace("\r", "")
+
+
 def smtp_config():
     return {
-        "host": os.environ.get("SMTP_HOST", ""),
-        "port": int(os.environ.get("SMTP_PORT", "587")),
-        "user": os.environ.get("SMTP_USER", ""),
-        "password": os.environ.get("SMTP_PASS", ""),
-        "from_email": os.environ.get("SMTP_FROM", ""),
-        "to_email": os.environ.get("EMAIL_TO", "alvinteo246810@gmail.com"),
-        "use_tls": os.environ.get("SMTP_USE_TLS", "true").lower() == "true",
-        "use_ssl": os.environ.get("SMTP_USE_SSL", "false").lower() == "true",
+        "host": get_env_value("SMTP_HOST", "HOST"),
+        "port": int(get_env_value("SMTP_PORT", "PORT", default="587")),
+        "user": normalize_credential(get_env_value("SMTP_USER", "USER", "EMAIL_USER")),
+        "password": normalize_credential(get_env_value("SMTP_PASS", "PASS", "EMAIL_PASS", "PASSWORD")),
+        "from_email": normalize_credential(get_env_value("SMTP_FROM", "FROM", "EMAIL_FROM", default=get_env_value("SMTP_USER", "USER", "EMAIL_USER"))),
+        "to_email": get_env_value("EMAIL_TO", "TO_EMAIL", default="alvinteo246810@gmail.com"),
+        "use_tls": get_env_value("SMTP_USE_TLS", "USE_TLS", default="true").lower() == "true",
+        "use_ssl": get_env_value("SMTP_USE_SSL", "USE_SSL", default="false").lower() == "true",
     }
 
 

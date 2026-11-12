@@ -207,18 +207,43 @@ button:active{transform:scale(.96)}
       status.textContent='正在通过后端发送通知到 Alvin 邮箱…';
       status.classList.remove('hidden');
 
-      fetch('/api/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(payload)
-      }).then(function(r){
-        return r.json().then(function(data){
-          if(!r.ok || !data.ok){
-            throw new Error(data.error || '邮件发送失败');
+      var endpointCandidates=['/api/send-email','/.netlify/functions/send-email'];
+      var fetchWithFallback=function attemptFetch(index){
+        if(index>=endpointCandidates.length){
+          throw new Error('No valid backend endpoint responded.');
+        }
+        return fetch(endpointCandidates[index], {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        }).then(function(r){
+          return r.text().then(function(text){
+            var data = null;
+            if(text && text.trim()){
+              try { data = JSON.parse(text); } catch (e) { throw new Error('Invalid JSON response from backend: ' + text.slice(0,120)); }
+            }
+
+            if(!r.ok){
+              if(data && data.error){
+                throw new Error(data.error);
+              }
+              throw new Error('HTTP ' + r.status + (text ? ': ' + text.slice(0,120) : '')); 
+            }
+
+            if(!data || !data.ok){
+              throw new Error((data && data.error) || '邮件发送失败');
+            }
+            return data;
+          });
+        }).catch(function(err){
+          if(index < endpointCandidates.length - 1){
+            return attemptFetch(index + 1);
           }
-          return data;
+          throw err;
         });
-      }).then(function(){
+      };
+
+      fetchWithFallback(0).then(function(){
         status.textContent='✅ 已通知 Alvin，等待兑现。';
         status.classList.add('success');
         status.classList.remove('error');
