@@ -214,10 +214,27 @@ button:active{transform:scale(.96)}
           body:JSON.stringify(payload)
         }).then(async function(r){
           var text = await r.text();
-          var data = text ? JSON.parse(text) : {};
-          if(!r.ok || !data.ok){
+          var data = null;
+
+          if(text && text.trim()){
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              throw new Error('Invalid JSON response from backend: ' + text.slice(0, 140));
+            }
+          }
+
+          if(!r.ok){
+            if(data && data.error){
+              throw new Error(data.error);
+            }
+            throw new Error('HTTP ' + r.status + (text ? ': ' + text.slice(0, 140) : ''));
+          }
+
+          if(!data || !data.ok){
             throw new Error((data && data.error) || '邮件发送失败');
           }
+
           return data;
         });
       };
