@@ -198,16 +198,13 @@ button:active{transform:scale(.96)}
       notePaper.classList.add('is-flipping');
 
       var payload={
-        subject:'Alvin 的赎罪计划：抽中礼物通知',
-        to_email:'alvinteo246810@gmail.com',
-        body:'Alvin：yithian 在赎罪计划中抽中了「'+g.n+'」。\n\n这是一份真诚的道歉，也是一份真实的兑现承诺。',
-        html:'<p>Alvin：yithian 在赎罪计划中抽中了 <strong>'+g.n+'</strong>。</p><p>这是一份真诚的道歉，也是一份真实的兑现承诺。</p>'
+        text:'Alvin：yithian 在《Alvin 的赎罪计划》中抽中了「'+g.n+'」。\n这是一份真诚的道歉，也是一份真实的兑现承诺。'
       };
 
-      status.textContent='正在通过后端发送通知到 Alvin 邮箱…';
+      status.textContent='正在通过 Telegram 通知 Alvin…';
       status.classList.remove('hidden');
 
-      var tryFetchEmail = function(url){
+      var tryFetchTelegram = function(url){
         return fetch(url, {
           method:'POST',
           headers:{'Content-Type':'application/json'},
@@ -232,38 +229,38 @@ button:active{transform:scale(.96)}
           }
 
           if(!data || !data.ok){
-            throw new Error((data && data.error) || '邮件发送失败');
+            throw new Error((data && data.error) || 'Telegram 发送失败');
           }
 
           return data;
         });
       };
 
-      var candidateUrls = ['/.netlify/functions/send-email', '/api/send-email'];
+      var candidateUrls = ['/.netlify/functions/send-telegram', '/api/send-telegram', '/.netlify/functions/send-email', '/api/send-email'];
       if(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'){
-        candidateUrls = ['/api/send-email', '/.netlify/functions/send-email'];
+        candidateUrls = ['/api/send-telegram', '/.netlify/functions/send-telegram', '/api/send-email', '/.netlify/functions/send-email'];
       }
 
       var lastErr = null;
       var runNext = function(i){
         if(i >= candidateUrls.length){
-          throw lastErr || new Error('邮件发送失败');
+          throw lastErr || new Error('Telegram 发送失败');
         }
-        return tryFetchEmail(candidateUrls[i]).catch(function(err){
+        return tryFetchTelegram(candidateUrls[i]).catch(function(err){
           lastErr = err;
           return runNext(i + 1);
         });
       };
 
       runNext(0).then(function(){
-        status.textContent='✅ 已通知 Alvin，等待兑现。';
+        status.textContent='✅ 已通过 Telegram 通知 Alvin，等待兑现。';
         status.classList.add('success');
         status.classList.remove('error');
       }).catch(function(err){
         var detail = err && err.message ? err.message : '未知错误';
         var netlifyHint = /404|Failed to fetch|No valid backend endpoint responded/i.test(detail)
-          ? '后端函数尚未成功部署到 Netlify，或路由未生效：请重新部署并确认 netlify/functions/send-email.js 已上线。'
-          : '后端未配置 SMTP，暂时无法发送邮件。';
+          ? '后端函数尚未成功部署到 Netlify，或路由未生效：请重新部署并确认 netlify/functions/send-telegram.js 已上线。'
+          : 'Telegram bot 未配置，暂时无法通知 Alvin。';
         status.textContent = '⚠️ ' + netlifyHint + ' 详情：' + detail;
         status.classList.add('error');
         status.classList.remove('success');
