@@ -1,0 +1,12 @@
+{
+  "name": "apology-game",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Alvin apology game deployed on Netlify",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}
