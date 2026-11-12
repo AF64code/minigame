@@ -239,13 +239,9 @@ button:active{transform:scale(.96)}
         });
       };
 
-      var candidateUrls = [];
+      var candidateUrls = ['/.netlify/functions/send-email', '/api/send-email'];
       if(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'){
-        candidateUrls.push('/api/send-email');
-      }
-      candidateUrls.push('/.netlify/functions/send-email');
-      if(window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'){
-        candidateUrls.push('/api/send-email');
+        candidateUrls = ['/api/send-email', '/.netlify/functions/send-email'];
       }
 
       var lastErr = null;
@@ -264,7 +260,11 @@ button:active{transform:scale(.96)}
         status.classList.add('success');
         status.classList.remove('error');
       }).catch(function(err){
-        status.textContent='⚠️ 后端未配置 SMTP，暂时无法发送邮件：'+(err && err.message ? err.message : '未知错误');
+        var detail = err && err.message ? err.message : '未知错误';
+        var netlifyHint = /404|Failed to fetch|No valid backend endpoint responded/i.test(detail)
+          ? '后端函数尚未成功部署到 Netlify，或路由未生效：请重新部署并确认 netlify/functions/send-email.js 已上线。'
+          : '后端未配置 SMTP，暂时无法发送邮件。';
+        status.textContent = '⚠️ ' + netlifyHint + ' 详情：' + detail;
         status.classList.add('error');
         status.classList.remove('success');
       });
