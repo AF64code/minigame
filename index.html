@@ -197,59 +197,33 @@ button:active{transform:scale(.96)}
       void notePaper.offsetWidth;
       notePaper.classList.add('is-flipping');
 
-      var payload={
-        text:'Alvin：yithian 在《Alvin 的赎罪计划》中抽中了「'+g.n+'」。\n这是一份真诚的道歉，也是一份真实的兑现承诺。'
-      };
+      var ntfyTopic='alvin_apology';
+      var ntfyUrl='https://ntfy.sh/' + ntfyTopic;
+      var ntfyMessage='yithian 在《Alvin 的赎罪计划》中抽中了「'+g.n+'」。\n这是一份真诚的道歉，也是一份真实的兑现承诺。';
 
-      status.textContent='正在通过 Telegram 通知 Alvin…';
+      status.textContent='正在通过 ntfy 通知 Alvin…';
       status.classList.remove('hidden');
 
-      var endpointCandidates=['/.netlify/functions/send-telegram','/api/send-telegram','/.netlify/functions/send-email','/api/send-email'];
-      var fetchWithFallback=function attemptFetch(index){
-        if(index>=endpointCandidates.length){
-          throw new Error('No valid backend endpoint responded.');
+      fetch(ntfyUrl, {
+        method:'POST',
+        headers:{
+          'Title':'Alvin 的赎罪计划',
+          'Priority':'high',
+          'Tags':'gift,warning'
+        },
+        body:ntfyMessage
+      }).then(function(r){
+        if(!r.ok){
+          throw new Error('ntfy request failed with HTTP ' + r.status);
         }
-        return fetch(endpointCandidates[index], {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify(payload)
-        }).then(function(r){
-          return r.text().then(function(text){
-            var data = null;
-            if(text && text.trim()){
-              try { data = JSON.parse(text); } catch (e) { throw new Error('Invalid JSON response from backend: ' + text.slice(0,120)); }
-            }
-
-            if(!r.ok){
-              if(data && data.error){
-                throw new Error(data.error);
-              }
-              throw new Error('HTTP ' + r.status + (text ? ': ' + text.slice(0,120) : '')); 
-            }
-
-            if(!data || !data.ok){
-              throw new Error((data && data.error) || 'Telegram 发送失败');
-            }
-            return data;
-          });
-        }).catch(function(err){
-          if(index < endpointCandidates.length - 1){
-            return attemptFetch(index + 1);
-          }
-          throw err;
-        });
-      };
-
-      fetchWithFallback(0).then(function(){
-        status.textContent='✅ 已通过 Telegram 通知 Alvin，等待兑现。';
+        return r.text();
+      }).then(function(){
+        status.textContent='✅ 已通过 ntfy 通知 Alvin，等待兑现。';
         status.classList.add('success');
         status.classList.remove('error');
       }).catch(function(err){
         var detail = err && err.message ? err.message : '未知错误';
-        var netlifyHint = /404|Failed to fetch|No valid backend endpoint responded/i.test(detail)
-          ? '后端函数尚未成功部署到 Netlify，或路由未生效：请重新部署并确认 netlify/functions/send-telegram.js 已上线。'
-          : 'Telegram bot 未配置，暂时无法通知 Alvin。';
-        status.textContent = '⚠️ ' + netlifyHint + ' 详情：' + detail;
+        status.textContent = '⚠️ ntfy 通知失败。详情：' + detail + '。请确认 ntfy 主题已可用，或换成 private topic / token 方式。';
         status.classList.add('error');
         status.classList.remove('success');
       });
