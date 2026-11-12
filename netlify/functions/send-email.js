@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+function getEnvValue(...keys) {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value).trim();
+    }
+  }
+  return '';
+}
+
+function normalizeSmtpCredential(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -25,17 +39,17 @@ exports.handler = async function (event) {
 
   try {
     const payload = JSON.parse(event.body || '{}');
-    const toEmail = payload.to_email || process.env.EMAIL_TO || '';
+    const toEmail = payload.to_email || getEnvValue('EMAIL_TO', 'TO_EMAIL');
     const subject = payload.subject || 'Alvin 的赎罪计划';
     const bodyText = payload.body || 'Alvin：已收到你的道歉与礼物。';
     const htmlText = payload.html || `<p>${bodyText.replace(/\n/g, '<br>')}</p>`;
 
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM || smtpUser;
-    const smtpPort = Number(process.env.SMTP_PORT || 587);
-    const useSsl = String(process.env.SMTP_USE_SSL || 'false').toLowerCase() === 'true';
+    const smtpHost = getEnvValue('SMTP_HOST', 'HOST');
+    const smtpUser = normalizeSmtpCredential(getEnvValue('SMTP_USER', 'USER', 'EMAIL_USER'));
+    const smtpPass = normalizeSmtpCredential(getEnvValue('SMTP_PASS', 'PASS', 'EMAIL_PASS', 'PASSWORD'));
+    const smtpFrom = normalizeSmtpCredential(getEnvValue('SMTP_FROM', 'FROM', 'EMAIL_FROM') || smtpUser);
+    const smtpPort = Number(getEnvValue('SMTP_PORT', 'PORT') || '587');
+    const useSsl = String(getEnvValue('SMTP_USE_SSL', 'USE_SSL', 'SSL') || 'false').toLowerCase() === 'true';
 
     if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom || !toEmail) {
       return {
@@ -43,7 +57,7 @@ exports.handler = async function (event) {
         headers: corsHeaders,
         body: JSON.stringify({
           ok: false,
-          error: 'SMTP is not configured in Netlify environment variables.'
+          error: 'SMTP is not configured in Netlify environment variables. Required: SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM/EMAIL_TO (or legacy aliases HOST/USER/PASS/FROM/EMAIL_TO).'
         })
       };
     }
